@@ -1,3 +1,4 @@
-import './style.css'
-
-console.log('hello2')
+const logo = require('./images/duck.jpg')
+const img = new Image()
+img.src = logo
+document.body.appendChild(img)
