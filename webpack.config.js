@@ -2,13 +2,15 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const TerserWebpackPlugin = require('terser-webpack-plugin') // 用来压缩js,可以压缩es6
+const OptimizeCssAssetsWebpackPlugin = require('optimize-css-assets-webpack-plugin') // 压缩css文件
 module.exports = {
-  mode: 'development', // 因为开发环境和生产环境的webpack配置有很多不一样,所以就用mode区分不同的环境
+  mode: 'production', // 因为开发环境和生产环境的webpack配置有很多不一样,所以就用mode区分不同的环境
   entry: {
     // entry里面的key就是chunk的名称
     // chunk是由多个模块组成的
     index: './src/index.js', // chunk index
-    login: './src/login.js' // chunk login
+    vendor: ['react','react-dom'] // 将node_modules里面的文件打包为一个chunk
   },
   output: {
     path: path.join(__dirname, 'dist'), // 输出的目录,只能是绝对路径
@@ -16,10 +18,10 @@ module.exports = {
     // [name]在多入口的情况下name是entry的key,在单入口的情况下name是main
     // [hash]是文件的指纹,打包之后的所有文件的都是一样的 ,[hash:8] 冒号后面的是hash的长度
     // hash的作用是为了防止缓存,当内容变化的时候hash会不同,这样就会读取新的文件
-    // [chunkhash] 
+    // [chunkhash]
     // [contenthash]
-    filename: '[name].[hash:8].js',
-    publicPath: '/' //设置根路径,会赋值给打包后的webpack.p
+    filename: '[name].[hash].js',
+    publicPath: '/' //设置根路径,会赋值给打包后的webpack.p,在浏览器访问的时候要以什么路径文件 如果图片路径是xx.jpg 有publicPath会加在前面
   },
   devServer: {
     contentBase: path.join(__dirname, 'dist')
@@ -38,7 +40,9 @@ module.exports = {
           loader: 'url-loader',
           options: {
             // 如果要加载的图片大小小于10K的话,就把这张图片转成base64编码
-            limit: 10 * 1024
+            limit: 10 * 1024,
+            outputPath:'images', // dist下面的路径 物理路径
+            publicPath:'/images' // url路径
           }
         }
       }
@@ -52,12 +56,20 @@ module.exports = {
       filename: 'index.html',
       hash: true, //为了避免缓存,可以在产出的资源后面添加hash值,因为浏览器的缓存是依靠url的,如果产生的hash不同,那么url也不同,这样做就可以避免缓存旧文件
       chunks: ['index', 'common'], // 如果不写chunks的话那么会在产出的html里面写入所有chunks的资源(多入口情况下会将entry里的所有chunk插入到html中)
-      chunksSortMode: 'manual' // 对引入的代码块进行排序,'manual'情况下是根据entry里面chunk的顺序来插入的
+      chunksSortMode: 'manual' // 对引入的代码块进行排序,'manual'情况下是根据chunks👆这行数组的顺序来的
     }),
-    new CleanWebpackPlugin(),
+    // new CleanWebpackPlugin(),
     new MiniCssExtractPlugin({
       filename: '[name].css', // name 是当前chunk的名字
       chunkFilename: '[id].css' // 在异步加载的时候用的 后续会补充
     })
-  ]
+  ],
+  optimization: {
+    // 这个选项的作用是对chunk做优化
+    minimizer: [
+      // 这里放优化的插件
+      new TerserWebpackPlugin(),
+      new OptimizeCssAssetsWebpackPlugin()
+    ]
+  }
 }
